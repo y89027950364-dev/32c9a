@@ -1,0 +1,751 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#1a1a2e">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Расписание">
+  <title>Расписание</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <style>
+    :root {
+      --bg: #0a0a12;
+      --bg-elevated: #12121e;
+      --card: #161622;
+      --card-hover: #1c1c2c;
+      --border: #24243a;
+      --border-light: #2e2e4a;
+      --text: #f5f5fa;
+      --text-muted: #9a9ab8;
+      --text-subtle: #6a6a85;
+      --accent: #00e5b0;
+      --accent-dim: #00e5b022;
+      --accent-strong: #00ffcc;
+      --accent-glow: #00e5b044;
+      --danger: #ff4757;
+      --danger-dim: #ff475722;
+      --homework: #ff5c8d;
+      --homework-dim: #ff5c8d22;
+      --homework-glow: #ff5c8d44;
+      --info: #4d9fff;
+      --info-dim: #4d9fff22;
+      --shadow: 0 12px 40px rgba(0,0,0,0.5), 0 4px 16px rgba(0,0,0,0.3);
+      --shadow-sm: 0 4px 16px rgba(0,0,0,0.3);
+      --shadow-card: 0 8px 24px rgba(0,0,0,0.35), 0 2px 8px rgba(0,0,0,0.2);
+      --radius: 20px;
+      --radius-sm: 12px;
+      --radius-xs: 8px;
+      --transition: 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+      --transition-fast: 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+      --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+      --mono: 'SF Mono', 'Fira Code', 'JetBrains Mono', monospace;
+      --focus-ring: 0 0 0 3px var(--accent-glow);
+    }
+
+    @media (prefers-color-scheme: light) {
+      :root {
+        --bg: #f5f6fa;
+        --bg-elevated: #ffffff;
+        --card: #ffffff;
+        --card-hover: #f0f1f8;
+        --border: #e0e2ec;
+        --border-light: #e8eaef;
+        --text: #141428;
+        --text-muted: #7a7a95;
+        --text-subtle: #a0a0b5;
+        --accent: #00b88a;
+        --accent-dim: #00b88a22;
+        --accent-strong: #009672;
+        --accent-glow: #00b88a44;
+        --danger: #e03e4e;
+        --danger-dim: #e03e4e22;
+        --homework: #e84d7a;
+        --homework-dim: #e84d7a22;
+        --homework-glow: #e84d7a44;
+        --info: #3a7bd5;
+        --info-dim: #3a7bd522;
+        --shadow: 0 12px 40px rgba(20,20,40,0.1), 0 4px 16px rgba(20,20,40,0.06);
+        --shadow-sm: 0 4px 16px rgba(20,20,40,0.08);
+        --shadow-card: 0 8px 24px rgba(20,20,40,0.1), 0 2px 8px rgba(20,20,40,0.05);
+      }
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { -webkit-text-size-adjust: 100%; }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+    }
+
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      line-height: 1.55;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    /* Subtle background pattern */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        radial-gradient(ellipse 80% 50% at 50% -20%, var(--accent-glow) 0%, transparent 50%),
+        radial-gradient(ellipse 60% 40% at 100% 100%, var(--homework-glow) 0%, transparent 50%);
+      pointer-events: none;
+      z-index: -1;
+    }
+
+    @media (prefers-color-scheme: light) {
+      body::before {
+        background-image:
+          radial-gradient(ellipse 80% 50% at 50% -20%, var(--accent-dim) 0%, transparent 50%),
+          radial-gradient(ellipse 60% 40% at 100% 100%, var(--homework-dim) 0%, transparent 50%);
+      }
+    }
+
+    .app {
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+      max-width: 480px;
+      margin: 0 auto;
+      padding-bottom: env(safe-area-inset-bottom);
+    }
+
+    /* Header */
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(var(--bg-elevated), 0.9);
+      border-bottom: 1px solid var(--border);
+      backdrop-filter: saturate(180%) blur(24px);
+      padding: env(safe-area-inset-top) 16px 12px;
+    }
+
+    .header-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 10px;
+    }
+
+    h1 {
+      font-size: 1.6rem;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      background: linear-gradient(135deg, var(--text) 0%, var(--accent) 50%, var(--homework) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .week-toggle {
+      display: flex;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 3px;
+      gap: 3px;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .week-btn {
+      flex: 1;
+      padding: 10px 18px;
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      font-size: 0.82rem;
+      font-weight: 600;
+      border-radius: 11px;
+      cursor: pointer;
+      transition: var(--transition-fast);
+      white-space: nowrap;
+    }
+
+    .week-btn.active {
+      background: linear-gradient(135deg, var(--accent) 0%, var(--accent-strong) 100%);
+      color: var(--bg);
+      box-shadow: 0 4px 14px var(--accent-glow);
+    }
+
+    .week-btn:not(.active):active { background: var(--card-hover); }
+
+    .current-time {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 14px;
+      background: linear-gradient(135deg, var(--accent-dim) 0%, var(--info-dim) 100%);
+      border: 1px solid var(--border-light);
+      border-radius: 12px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: var(--accent);
+      font-family: var(--mono);
+      letter-spacing: 0.02em;
+    }
+
+    .current-time::before {
+      content: '';
+      width: 8px;
+      height: 8px;
+      background: var(--accent);
+      border-radius: 50%;
+      box-shadow: 0 0 12px var(--accent), 0 0 24px var(--accent-glow);
+      animation: pulse 1.8s ease-in-out infinite;
+    }
+
+    @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.55;transform:scale(0.85)} }
+
+    .offline-badge {
+      display: none; align-items: center; gap: 6px;
+      padding: 6px 10px; background: var(--danger-dim); color: var(--danger);
+      border-radius: 8px; font-size: 0.7rem; font-weight: 700; font-family: var(--mono);
+      border: 1px solid var(--danger);
+    }
+    .offline-badge.show { display: flex; }
+
+    /* Days Navigation */
+    .days-nav {
+      display: flex; gap: 6px; overflow-x: auto;
+      padding: 14px 16px 10px;
+      scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+      background: rgba(var(--bg), 0.9);
+      border-bottom: 1px solid var(--border);
+      position: sticky; top: 68px; z-index: 50;
+      backdrop-filter: saturate(180%) blur(24px);
+    }
+    .days-nav::-webkit-scrollbar { display: none; }
+
+    .day-tab {
+      flex: 0 0 auto; scroll-snap-align: start;
+      padding: 11px 18px;
+      border: 1px solid var(--border);
+      background: var(--card);
+      border-radius: 14px;
+      font-size: 0.82rem; font-weight: 600;
+      color: var(--text-muted);
+      cursor: pointer; transition: var(--transition-fast);
+      white-space: nowrap; min-width: 78px; text-align: center;
+      position: relative;
+    }
+
+    .day-tab.active {
+      border-color: var(--accent);
+      background: linear-gradient(135deg, var(--accent-dim) 0%, var(--accent-glow) 100%);
+      color: var(--accent);
+      box-shadow: 0 0 0 2px var(--accent-dim), 0 4px 16px var(--accent-glow);
+    }
+
+    .day-tab.today:not(.active) { border-color: var(--info); color: var(--info); }
+
+    .day-tab.has-classes::after {
+      content: ''; display: inline-block; width: 6px; height: 6px;
+      margin-left: 7px; background: var(--accent); border-radius: 50%;
+      box-shadow: 0 0 8px var(--accent);
+    }
+
+    .day-tab.has-homework::before {
+      content: ''; position: absolute; top: 7px; right: 7px;
+      width: 8px; height: 8px; background: var(--homework); border-radius: 50%;
+      box-shadow: 0 0 0 2px var(--bg), 0 0 10px var(--homework);
+      animation: hwBlip 2s ease-in-out infinite;
+    }
+
+    @keyframes hwBlip { 0%,100%{transform:scale(1);opacity:1} 50%{transform:scale(1.15);opacity:0.8} }
+
+    /* Main */
+    main {
+      flex: 1; padding: 18px 16px;
+      display: flex; flex-direction: column; gap: 14px;
+    }
+
+    .schedule-day { display: none; animation: fadeIn 0.35s var(--transition); }
+    .schedule-day.active { display: flex; flex-direction: column; gap: 12px; }
+
+    @keyframes fadeIn { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+
+    /* Lesson Card - Beautiful Edition */
+    .lesson {
+      display: grid;
+      grid-template-columns: 76px 1fr auto;
+      gap: 14px;
+      padding: 18px 18px;
+      background: linear-gradient(145deg, var(--card) 0%, var(--bg-elevated) 100%);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      transition: var(--transition);
+      position: relative; overflow: hidden;
+      box-shadow: var(--shadow-card);
+    }
+
+    .lesson::before {
+      content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px;
+      background: var(--border); transition: var(--transition-fast);
+    }
+
+    .lesson::after {
+      content: ''; position: absolute; inset: 0;
+      background: linear-gradient(135deg, transparent 0%, var(--accent-glow) 100%);
+      opacity: 0; transition: var(--transition);
+      pointer-events: none;
+    }
+
+    .lesson:hover, .lesson:active {
+      transform: translateY(-2px) scale(1.005);
+      border-color: var(--accent);
+      box-shadow: var(--shadow), 0 0 30px var(--accent-glow);
+    }
+
+    .lesson:hover::after, .lesson:active::after { opacity: 1; }
+
+    .lesson:hover::before, .lesson:active::before {
+      background: var(--accent); width: 5px;
+      box-shadow: 0 0 16px var(--accent), 0 0 32px var(--accent-glow);
+    }
+
+    .lesson.current {
+      border-color: var(--accent);
+      background: linear-gradient(145deg, var(--accent-dim) 0%, var(--accent-glow) 100%);
+      box-shadow: 0 0 0 1px var(--accent), var(--shadow), 0 0 40px var(--accent-glow);
+    }
+
+    .lesson.current::before { background: var(--accent); width: 5px; box-shadow: 0 0 20px var(--accent), 0 0 40px var(--accent-glow); }
+    .lesson.current::after { display: none; }
+
+    .lesson.has-homework { border-color: var(--homework); }
+    .lesson.has-homework::before { background: var(--homework); box-shadow: 0 0 16px var(--homework), 0 0 32px var(--homework-glow); }
+
+    .lesson.past { opacity: 0.55; }
+    .lesson.past::before { background: var(--border); }
+    .lesson.past:hover { transform: none; box-shadow: var(--shadow-card); }
+    .lesson.past:hover::after { display: none; }
+
+    .lesson-time {
+      display: flex; flex-direction: column; align-items: flex-start; justify-content: center;
+      gap: 3px; font-family: var(--mono); font-size: 0.72rem;
+      color: var(--text-subtle); white-space: nowrap; letter-spacing: 0.02em;
+    }
+
+    .lesson-time .start {
+      font-weight: 700; font-size: 0.95rem; color: var(--text); line-height: 1.1;
+    }
+    .lesson.current .lesson-time .start { color: var(--accent); text-shadow: 0 0 16px var(--accent-glow); }
+    .lesson.has-homework .lesson-time .start { color: var(--homework); }
+
+    .lesson-info { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+
+    .lesson-subject {
+      font-size: 1.05rem; font-weight: 700; color: var(--text); line-height: 1.25;
+      letter-spacing: -0.01em;
+    }
+    .lesson.current .lesson-subject { color: var(--accent); }
+    .lesson.has-homework .lesson-subject { color: var(--homework); }
+
+    .lesson-subject::after {
+      content: ''; display: inline-block; width: 8px; height: 8px; margin-left: 10px;
+      background: var(--homework); border-radius: 50%; flex-shrink: 0;
+      animation: hwPulse 2.2s ease-in-out infinite;
+      opacity: 0; transform: scale(0.5); transition: var(--transition);
+    }
+    .lesson.has-homework .lesson-subject::after { opacity: 1; transform: scale(1); }
+
+    @keyframes hwPulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.7;transform:scale(0.9)} }
+
+    .lesson-room {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 6px 12px; background: var(--info-dim); border: 1px solid var(--info);
+      border-radius: 10px; font-size: 0.78rem; font-weight: 600; color: var(--info);
+      box-shadow: 0 0 12px var(--info-dim);
+    }
+    .lesson-room svg { width: 13px; height: 13px; flex-shrink: 0; }
+
+    .homework-btn {
+      display: flex; align-items: center; justify-content: center;
+      width: 44px; height: 44px;
+      border: 1px solid var(--border); background: var(--bg); border-radius: 12px;
+      color: var(--text-muted); cursor: pointer; transition: var(--transition-fast); flex-shrink: 0;
+    }
+    .homework-btn:hover, .homework-btn:active {
+      background: var(--card-hover); border-color: var(--accent); color: var(--accent);
+      transform: scale(1.08); box-shadow: 0 0 16px var(--accent-glow);
+    }
+    .homework-btn.has-homework {
+      background: var(--homework-dim); border-color: var(--homework); color: var(--homework);
+      box-shadow: 0 0 12px var(--homework-dim);
+    }
+    .homework-btn.has-homework:hover { background: var(--homework); color: var(--bg); box-shadow: 0 0 20px var(--homework-glow); }
+    .homework-btn svg { width: 22px; height: 22px; }
+
+    /* Empty Day */
+    .empty-day {
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      padding: 56px 28px; text-align: center;
+      background: linear-gradient(145deg, var(--card) 0%, var(--bg-elevated) 100%);
+      border: 2px dashed var(--border); border-radius: var(--radius);
+      color: var(--text-subtle); gap: 14px;
+      box-shadow: var(--shadow-card);
+    }
+    .empty-day svg { width: 72px; height: 72px; opacity: 0.35; }
+    .empty-day p { font-size: 1.05rem; font-weight: 600; color: var(--text-muted); }
+    .empty-day small { font-size: 0.8rem; }
+
+    /* Footer */
+    footer { padding: 20px 16px; text-align: center; color: var(--text-subtle); font-size: 0.72rem; border-top: 1px solid var(--border); margin-top: auto; }
+    footer a { color: var(--accent); text-decoration: none; font-weight: 500; }
+    footer a:hover { text-decoration: underline; }
+
+    /* Install Banner */
+    .install-banner {
+      display: none; margin: 0 16px 16px; padding: 16px 18px;
+      background: linear-gradient(135deg, var(--accent-dim) 0%, var(--homework-dim) 100%);
+      border: 1px solid var(--accent); border-radius: var(--radius); gap: 12px; align-items: center;
+      box-shadow: 0 8px 24px var(--accent-glow), 0 0 0 1px var(--accent-glow) inset;
+    }
+    .install-banner.show { display: flex; }
+    .install-banner-content { flex: 1; }
+    .install-banner-title { font-weight: 700; font-size: 0.9rem; margin-bottom: 2px; }
+    .install-banner-text { font-size: 0.75rem; color: var(--text-muted); }
+
+    /* Modal */
+    .modal-overlay {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.75); backdrop-filter: blur(12px);
+      z-index: 1000; display: none; align-items: center; justify-content: center;
+      padding: 16px; animation: fadeIn 0.2s var(--transition);
+    }
+    .modal-overlay.show { display: flex; }
+
+    .modal {
+      width: 100%; max-width: 420px;
+      background: linear-gradient(145deg, var(--card) 0%, var(--bg-elevated) 100%);
+      border: 1px solid var(--border); border-radius: var(--radius);
+      padding: 28px; box-shadow: var(--shadow);
+      animation: slideUp 0.35s var(--transition);
+    }
+    @keyframes slideUp { from{opacity:0;transform:translateY(24px)} to{opacity:1;transform:translateY(0)} }
+
+    .modal h2 { font-size: 1.3rem; font-weight: 800; margin-bottom: 6px; background: linear-gradient(135deg, var(--text), var(--accent)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+    .modal .lesson-title { color: var(--text-muted); font-size: 0.85rem; margin-bottom: 22px; line-height: 1.4; }
+
+    .form-group { margin-bottom: 18px; }
+    label { display: block; font-size: 0.75rem; font-weight: 700; color: var(--text-subtle); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.08em; }
+
+    textarea {
+      width: 100%; min-height: 130px; padding: 14px 16px;
+      background: var(--bg); border: 1px solid var(--border); border-radius: 12px;
+      color: var(--text); font-family: var(--font); font-size: 0.95rem; line-height: 1.7;
+      resize: vertical; transition: var(--transition-fast);
+    }
+    textarea:focus { outline: none; border-color: var(--accent); box-shadow: var(--focus-ring); }
+    textarea::placeholder { color: var(--text-subtle); opacity: 0.6; }
+
+    .modal-actions { display: flex; gap: 10px; margin-top: 28px; }
+    .btn { flex: 1; padding: 16px 22px; border: none; border-radius: 12px; font-size: 0.95rem; font-weight: 700; cursor: pointer; transition: var(--transition-fast); }
+    .btn-primary { background: linear-gradient(135deg, var(--accent) 0%, var(--accent-strong) 100%); color: var(--bg); box-shadow: 0 4px 16px var(--accent-glow); }
+    .btn-primary:hover, .btn-primary:active { transform: translateY(-2px); box-shadow: 0 8px 24px var(--accent-glow); }
+    .btn-secondary { background: var(--bg); border: 1px solid var(--border); color: var(--text); }
+    .btn-secondary:hover, .btn-secondary:active { background: var(--card-hover); border-color: var(--accent); }
+    .btn-danger { background: linear-gradient(135deg, var(--danger) 0%, #e03e4e 100%); color: white; box-shadow: 0 4px 16px var(--danger-dim); }
+    .btn-danger:hover, .btn-danger:active { transform: translateY(-2px); box-shadow: 0 8px 24px var(--danger-dim); }
+
+    .homework-preview {
+      margin-top: 12px; padding: 14px; background: var(--homework-dim); border: 1px solid var(--homework);
+      border-radius: 12px; font-size: 0.88rem; line-height: 1.7; color: var(--text);
+      white-space: pre-wrap; word-wrap: break-word; box-shadow: 0 0 12px var(--homework-dim);
+    }
+    .homework-preview.empty { color: var(--text-subtle); font-style: italic; background: var(--bg); border-color: var(--border); box-shadow: none; }
+
+    /* High contrast */
+    @media (prefers-contrast: high) {
+      :root { --border: currentColor; --shadow: none; --shadow-card: none; }
+      .lesson { border-width: 2px; }
+      .day-tab { border-width: 2px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <div class="header-top">
+        <h1>Расписание</h1>
+        <div class="week-toggle" role="tablist" aria-label="Чётность недели">
+          <button class="week-btn active" role="tab" aria-selected="true" data-week="even" aria-controls="schedule-even">Чётная</button>
+          <button class="week-btn" role="tab" aria-selected="false" data-week="odd" aria-controls="schedule-odd">Нечётная</button>
+        </div>
+      </div>
+      <div class="current-time" id="currentTime" aria-live="polite"></div>
+      <div class="offline-badge" id="offlineBadge" aria-live="polite">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path d="M1 1l22 22M16.72 11.06A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M5 12.55a18.45 18.45 0 0 1 4.75-5.23"/>
+          <line x1="12" y1="20" x2="12.01" y2="20"/>
+        </svg>
+        Офлайн
+      </div>
+    </header>
+
+    <nav class="days-nav" role="tablist" aria-label="Дни недели" id="daysNav"></nav>
+
+    <div class="install-banner" id="installBanner" role="region" aria-label="Установка приложения">
+      <div class="install-banner-content">
+        <div class="install-banner-title">Установить приложение</div>
+        <div class="install-banner-text">Работает офлайн, быстрый доступ с рабочего стола</div>
+      </div>
+      <button class="btn btn-primary" id="installBtn" style="padding: 12px 18px; font-size: 0.85rem; white-space: nowrap;">Установить</button>
+      <button class="btn btn-secondary" id="dismissInstall" style="padding: 12px 14px; font-size: 0.85rem;">×</button>
+    </div>
+
+    <main role="tabpanel" id="scheduleContainer"></main>
+
+    <footer>Данные из Excel · <a href="#" id="refreshLink">Обновить</a></footer>
+  </div>
+
+  <!-- Homework Modal -->
+  <div class="modal-overlay" id="hwModal" role="dialog" aria-modal="true" aria-labelledby="hwModalTitle">
+    <div class="modal">
+      <h2 id="hwModalTitle">Домашнее задание</h2>
+      <div class="lesson-title" id="hwModalSubtitle"></div>
+      <form id="hwForm">
+        <div class="form-group">
+          <label for="hwInput">Задание</label>
+          <textarea id="hwInput" placeholder="Напишите домашнее задание…" rows="6"></textarea>
+        </div>
+        <div class="homework-preview empty" id="hwPreview" aria-live="polite">Задания нет</div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-danger" id="hwDeleteBtn" style="display:none;">Удалить</button>
+          <button type="button" class="btn btn-secondary" id="hwCancelBtn">Отмена</button>
+          <button type="submit" class="btn btn-primary">Сохранить</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    // ===== DATA =====
+    const TIME_SLOTS = ['8.00-9.35','9.55-11.30','12.00-13.35','13.45-15.20','15.30-17.05'];
+    const DAYS = ['понедельник','вторник','среда','четверг','пятница','суббота'];
+    const DAY_LABELS = ['Пн','Вт','Ср','Чт','Пт','Сб'];
+    const DAY_FULL = ['Понедельник','Вторник','Среда','Четверг','Пятница','Суббота'];
+
+    const SUBJECT_NAMES = {
+      'физ-ра':'Физкультура','ск':'СК','архитектура':'Архитектура',
+      'тосп':'ТОСП','учет контроль':'Учёт и контроль','инглиш':'Английский',
+    };
+    const ROOM_NAMES = {'с\\з':'Спортзал','406':'Ауд. 406','312':'Ауд. 312','313':'Ауд. 313','405':'Ауд. 405','109':'Ауд. 109'};
+
+    const SCHEDULE_EVEN = {
+      'понедельник':[{time:'9.55-11.30',subject:'ск',room:'406'},{time:'12.00-13.35',subject:'архитектура',room:'312'},{time:'13.45-15.20',subject:'тосп',room:'313'},{time:'15.30-17.05',subject:'инглиш',room:'109'}],
+      'вторник':[{time:'8.00-9.35',subject:'физ-ра',room:'с\\з'},{time:'9.55-11.30',subject:'ск',room:'406'},{time:'12.00-13.35',subject:'тосп',room:'313'}],
+      'среда':[{time:'9.55-11.30',subject:'архитектура',room:'312'},{time:'12.00-13.35',subject:'тосп',room:'313'},{time:'13.45-15.20',subject:'инглиш',room:'109'}],
+      'четверг':[{time:'9.55-11.30',subject:'ск',room:'406'},{time:'12.00-13.35',subject:'тосп',room:'313'},{time:'13.45-15.20',subject:'тосп',room:'313'}],
+      'пятница':[{time:'9.55-11.30',subject:'учет контроль',room:'405'},{time:'12.00-13.35',subject:'тосп',room:'313'},{time:'13.45-15.20',subject:'тосп',room:'313'}],
+      'суббота':[{time:'8.00-9.35',subject:'тосп',room:'313'},{time:'9.55-11.30',subject:'архитектура',room:'312'},{time:'12.00-13.35',subject:'ск',room:'406'}],
+    };
+    const SCHEDULE_ODD = {
+      'понедельник':[{time:'9.55-11.30',subject:'архитектура',room:'312'},{time:'12.00-13.35',subject:'тосп',room:'313'},{time:'13.45-15.20',subject:'инглиш',room:'109'}],
+      'вторник':[{time:'12.00-13.35',subject:'тосп',room:'313'},{time:'13.45-15.20',subject:'физ-ра',room:'с\\з'},{time:'15.30-17.05',subject:'ск',room:'406'}],
+      'среда':[{time:'8.00-9.35',subject:'учет контроль',room:'405'},{time:'9.55-11.30',subject:'архитектура',room:'312'},{time:'12.00-13.35',subject:'тосп',room:'313'}],
+      'четверг':[{time:'9.55-11.30',subject:'ск',room:'406'},{time:'12.00-13.35',subject:'тосп',room:'313'},{time:'13.45-15.20',subject:'тосп',room:'313'}],
+      'пятница':[{time:'9.55-11.30',subject:'учет контроль',room:'405'},{time:'12.00-13.35',subject:'тосп',room:'313'},{time:'13.45-15.20',subject:'тосп',room:'313'}],
+      'суббота':[{time:'8.00-9.35',subject:'тосп',room:'313'},{time:'9.55-11.30',subject:'архитектура',room:'312'},{time:'12.00-13.35',subject:'ск',room:'406'}],
+    };
+
+    // ===== HOMEWORK STORAGE =====
+    const HW_KEY = 'schedule_homework_v1';
+    function getHomework() { try { return JSON.parse(localStorage.getItem(HW_KEY) || '{}'); } catch { return {}; } }
+    function saveHomework(data) { localStorage.setItem(HW_KEY, JSON.stringify(data)); }
+    function getHwKey(week, day, time, subject) { return `${week}|${day}|${time}|${subject}`; }
+    function getHomeworkForLesson(week, day, time, subject) { return getHomework()[getHwKey(week, day, time, subject)] || ''; }
+    function setHomeworkForLesson(week, day, time, subject, text) {
+      const hw = getHomework(); const key = getHwKey(week, day, time, subject);
+      if (text.trim()) hw[key] = text.trim(); else delete hw[key];
+      saveHomework(hw);
+    }
+
+    // ===== STATE =====
+    let currentWeek = 'even';
+    let currentDayIndex = getTodayIndex();
+    let scheduleData = SCHEDULE_EVEN;
+    let hwModalLesson = null;
+
+    // ===== DOM =====
+    const daysNav = document.getElementById('daysNav');
+    const scheduleContainer = document.getElementById('scheduleContainer');
+    const currentTimeEl = document.getElementById('currentTime');
+    const weekBtns = document.querySelectorAll('.week-btn');
+    const refreshLink = document.getElementById('refreshLink');
+    const offlineBadge = document.getElementById('offlineBadge');
+    const installBanner = document.getElementById('installBanner');
+    const installBtn = document.getElementById('installBtn');
+    const dismissInstall = document.getElementById('dismissInstall');
+    const hwModal = document.getElementById('hwModal');
+    const hwForm = document.getElementById('hwForm');
+    const hwInput = document.getElementById('hwInput');
+    const hwPreview = document.getElementById('hwPreview');
+    const hwDeleteBtn = document.getElementById('hwDeleteBtn');
+    const hwCancelBtn = document.getElementById('hwCancelBtn');
+    const hwModalTitle = document.getElementById('hwModalTitle');
+    const hwModalSubtitle = document.getElementById('hwModalSubtitle');
+
+    // ===== SERVICE WORKER =====
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('./sw.js').catch(() => {});
+    }
+
+    // ===== ONLINE/OFFLINE =====
+    function updateOnlineStatus() { offlineBadge.classList.toggle('show', !navigator.onLine); }
+    window.addEventListener('online', updateOnlineStatus);
+    window.addEventListener('offline', updateOnlineStatus);
+    updateOnlineStatus();
+
+    // ===== PWA INSTALL =====
+    let deferredPrompt = null;
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault(); deferredPrompt = e;
+      if (!localStorage.getItem('installDismissed')) installBanner.classList.add('show');
+    });
+    window.addEventListener('appinstalled', () => { installBanner.classList.remove('show'); deferredPrompt = null; });
+    installBtn.addEventListener('click', async () => {
+      if (!deferredPrompt) return; deferredPrompt.prompt(); await deferredPrompt.userChoice; deferredPrompt = null; installBanner.classList.remove('show');
+    });
+    dismissInstall.addEventListener('click', () => { installBanner.classList.remove('show'); localStorage.setItem('installDismissed', 'true'); });
+
+    // ===== INIT =====
+    function init() { renderDaysNav(); renderSchedule(); updateCurrentTime(); setInterval(updateCurrentTime, 30000); bindEvents(); const autoWeek = getWeekParity(); setWeek(autoWeek); }
+
+    function bindEvents() {
+      weekBtns.forEach(btn => btn.addEventListener('click', () => setWeek(btn.dataset.week)));
+      refreshLink.addEventListener('click', (e) => { e.preventDefault(); location.reload(); });
+      daysNav.addEventListener('keydown', (e) => {
+        const tabs = [...daysNav.querySelectorAll('.day-tab')];
+        const activeIdx = tabs.findIndex(t => t.classList.contains('active'));
+        if (e.key === 'ArrowRight' && activeIdx < tabs.length - 1) { e.preventDefault(); tabs[activeIdx + 1].click(); }
+        else if (e.key === 'ArrowLeft' && activeIdx > 0) { e.preventDefault(); tabs[activeIdx - 1].click(); }
+      });
+      hwForm.addEventListener('submit', saveHomeworkHandler);
+      hwCancelBtn.addEventListener('click', closeModal);
+      hwDeleteBtn.addEventListener('click', deleteHomework);
+      hwInput.addEventListener('input', () => updatePreview(hwInput.value));
+      hwModal.addEventListener('click', (e) => { if (e.target === hwModal) closeModal(); });
+      document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && hwModal.classList.contains('show')) closeModal(); });
+    }
+
+    // ===== RENDER =====
+    function renderDaysNav() {
+      daysNav.innerHTML = DAYS.map((day, i) => {
+        const lessons = scheduleData[day] || [];
+        const hasClasses = lessons.length > 0;
+        const hasHomework = lessons.some(l => getHomeworkForLesson(currentWeek, day, l.time, l.subject));
+        const isToday = i === getTodayIndex();
+        const isActive = i === currentDayIndex;
+        return `<button class="day-tab ${isActive?'active':''} ${isToday?'today':''} ${hasClasses?'has-classes':''} ${hasHomework?'has-homework':''}" role="tab" aria-selected="${isActive}" aria-controls="panel-${day}" data-day="${day}" data-index="${i}">${DAY_LABELS[i]}</button>`;
+      }).join('');
+      daysNav.querySelectorAll('.day-tab').forEach(btn => btn.addEventListener('click', () => switchDay(parseInt(btn.dataset.index,10))));
+      const activeTab = daysNav.querySelector('.day-tab.active'); if (activeTab) activeTab.scrollIntoView({behavior:'smooth',inline:'center'});
+    }
+
+    function renderSchedule() {
+      scheduleContainer.innerHTML = DAYS.map((day, i) => {
+        const lessons = scheduleData[day] || [];
+        const isActive = i === currentDayIndex;
+        return `<section class="schedule-day ${isActive?'active':''}" role="tabpanel" id="panel-${day}" aria-labelledby="tab-${day}" hidden="${!isActive}">${lessons.length===0?renderEmptyDay(day):lessons.map((l,idx)=>renderLesson(l,day,idx)).join('')}</section>`;
+      }).join('');
+      highlightCurrentLesson();
+    }
+
+    function renderEmptyDay(day) { return `<div class="empty-day"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 7V3a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v4M8 21v-4M16 21v-4M3 8H3a2 2 0 0 1-2-2V7M21 8h.01M3 16H3a2 2 0 0 0 2 2v1M21 16h.01M8 7h8M8 17h8"/></svg><p>Пар нет</p><small>${DAY_FULL[DAYS.indexOf(day)]}</small></div>`; }
+
+    function renderLesson(lesson, day, idx) {
+      const subjectKey = lesson.subject.toLowerCase();
+      const subjectName = SUBJECT_NAMES[subjectKey] || lesson.subject;
+      const roomName = ROOM_NAMES[lesson.room] || `Ауд. ${lesson.room}`;
+      const timeParts = lesson.time.split('-');
+      const isCurrent = isLessonCurrent(lesson.time, day);
+      const isPast = isLessonPast(lesson.time, day);
+      const hwText = getHomeworkForLesson(currentWeek, day, lesson.time, lesson.subject);
+      const hasHw = !!hwText;
+
+      return `<article class="lesson ${isCurrent?'current':''} ${isPast?'past':''} ${hasHw?'has-homework':''}" data-time="${lesson.time}" data-day="${day}" data-subject="${lesson.subject}">
+        <div class="lesson-time"><span class="start">${timeParts[0]}</span><span>${timeParts[1]}</span></div>
+        <div class="lesson-info">
+          <span class="lesson-subject">${subjectName}</span>
+          <span class="lesson-room"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>${roomName}</span>
+        </div>
+        <button class="homework-btn ${hasHw?'has-homework':''}" data-day="${day}" data-time="${lesson.time}" data-subject="${lesson.subject}" aria-label="${hasHw?'Редактировать':'Добавить'} домашнее задание">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+        </button>
+      </article>`;
+    }
+
+    // ===== LOGIC =====
+    function getTodayIndex() { const d=new Date().getDay(); return d===0?6:d-1; }
+    function getWeekParity(date=new Date()) { const d=new Date(Date.UTC(date.getFullYear(),date.getMonth(),date.getDate())); const dayNum=d.getUTCDay()||7; d.setUTCDate(d.getUTCDate()+4-dayNum); const yearStart=new Date(Date.UTC(d.getUTCFullYear(),0,1)); const weekNum=Math.ceil((((d-yearStart)/86400000)+1)/7); return weekNum%2===0?'even':'odd'; }
+
+    function setWeek(week) {
+      currentWeek = week; scheduleData = week==='even'?SCHEDULE_EVEN:SCHEDULE_ODD; localStorage.setItem('scheduleWeek',week);
+      weekBtns.forEach(btn=>{const a=btn.dataset.week===week;btn.classList.toggle('active',a);btn.setAttribute('aria-selected',a);});
+      currentDayIndex = getTodayIndex(); renderDaysNav(); renderSchedule();
+    }
+
+    function switchDay(index) {
+      currentDayIndex = index;
+      daysNav.querySelectorAll('.day-tab').forEach((tab,i)=>{const a=i===index;tab.classList.toggle('active',a);tab.setAttribute('aria-selected',a);});
+      scheduleContainer.querySelectorAll('.schedule-day').forEach((panel,i)=>{const a=i===index;panel.classList.toggle('active',a);panel.hidden=!a;});
+      daysNav.querySelectorAll('.day-tab')[index]?.scrollIntoView({behavior:'smooth',inline:'center'});
+      highlightCurrentLesson();
+    }
+
+    function updateCurrentTime() {
+      const now=new Date(); const timeStr=now.toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'});
+      const dayName=DAY_FULL[getTodayIndex()]; currentTimeEl.textContent=`${dayName}, ${timeStr}`;
+      if (now.getHours()===0 && now.getMinutes()<5) { currentDayIndex=getTodayIndex(); renderDaysNav(); renderSchedule(); }
+      highlightCurrentLesson();
+    }
+
+    function timeToMinutes(t){const[h,m]=t.split(':').map(Number);return h*60+m;}
+    function isLessonCurrent(lt,day){const now=new Date();const ti=getTodayIndex();const di=DAYS.indexOf(day);if(di!==ti)return false;const[s,e]=lt.split('-');const nm=now.getHours()*60+now.getMinutes();return nm>=timeToMinutes(s)&&nm<timeToMinutes(e);}
+    function isLessonPast(lt,day){const now=new Date();const ti=getTodayIndex();const di=DAYS.indexOf(day);if(di>ti)return false;if(di<ti)return true;const[,e]=lt.split('-');return now.getHours()*60+now.getMinutes()>=timeToMinutes(e);}
+
+    function highlightCurrentLesson(){document.querySelectorAll('.lesson').forEach(el=>{const c=el.classList.contains('current');const sc=isLessonCurrent(el.dataset.time,el.dataset.day);const sp=isLessonPast(el.dataset.time,el.dataset.day);if(sc&&!c){el.classList.add('current');el.classList.remove('past');}else if(!sc&&c){el.classList.remove('current');}if(sp&&!el.classList.contains('past')&&!sc)el.classList.add('past');});}
+
+    // ===== HOMEWORK MODAL =====
+    function openModal(lessonEl) {
+      const day = lessonEl.dataset.day, time = lessonEl.dataset.time, subject = lessonEl.dataset.subject;
+      hwModalLesson = {day,time,subject};
+      const subjectName = SUBJECT_NAMES[subject.toLowerCase()] || subject;
+      hwModalTitle.textContent = 'Домашнее задание';
+      hwModalSubtitle.textContent = `${DAY_FULL[DAYS.indexOf(day)]}, ${time} — ${subjectName}`;
+      const hw = getHomeworkForLesson(currentWeek, day, time, subject);
+      hwInput.value = hw; updatePreview(hw);
+      hwDeleteBtn.style.display = hw ? 'block' : 'none';
+      hwModal.classList.add('show'); hwInput.focus(); document.body.style.overflow = 'hidden';
+    }
+
+    function closeModal() { hwModal.classList.remove('show'); hwModalLesson = null; document.body.style.overflow = ''; }
+
+    function updatePreview(text) { hwPreview.textContent = text.trim() || 'Задания нет'; hwPreview.classList.toggle('empty', !text.trim()); }
+
+    function saveHomeworkHandler(e) { e.preventDefault(); if (!hwModalLesson) return; setHomeworkForLesson(currentWeek, hwModalLesson.day, hwModalLesson.time, hwModalLesson.subject, hwInput.value); closeModal(); renderDaysNav(); renderSchedule(); }
+
+    function deleteHomework() { if (!hwModalLesson) return; setHomeworkForLesson(currentWeek, hwModalLesson.day, hwModalLesson.time, hwModalLesson.subject, ''); closeModal(); renderDaysNav(); renderSchedule(); }
+
+    scheduleContainer.addEventListener('click', (e) => {
+      const btn = e.target.closest('.homework-btn');
+      if (btn) openModal(btn);
+    });
+
+    // ===== START =====
+    init();
+  </script>
+</body>
+</html>

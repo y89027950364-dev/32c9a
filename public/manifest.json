@@ -1,0 +1,20 @@
+{
+  "name": "Расписание занятий",
+  "short_name": "Расписание",
+  "description": "Расписание пар на неделю (чётная/нечётная)",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#0d0d14",
+  "theme_color": "#1a1a2e",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["education", "utilities"],
+  "lang": "ru"
+}

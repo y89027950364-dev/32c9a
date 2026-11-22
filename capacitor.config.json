@@ -1,0 +1,25 @@
+{
+  "appId": "ru.gosuslugi.schedule",
+  "appName": "Расписание",
+  "webDir": "public",
+  "bundledWebRuntime": false,
+  "android": {
+    "buildOptions": {
+      "keystorePath": "release-key.keystore",
+      "keystoreAlias": "schedule-key",
+      "keystorePassword": "{{CAPACITOR_ANDROID_KEYSTORE_PASSWORD}}",
+      "keystoreAliasPassword": "{{CAPACITOR_ANDROID_KEY_PASSWORD}}"
+    }
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 1500,
+      "backgroundColor": "#0a0a12",
+      "showSpinner": false
+    },
+    "StatusBar": {
+      "style": "dark",
+      "backgroundColor": "#0a0a12"
+    }
+  }
+}
